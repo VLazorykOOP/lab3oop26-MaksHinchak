@@ -5,6 +5,317 @@
 using namespace std;
 
 
+// ==================== ЗАДАЧА 3 ====================
+class Matrix {
+private:
+    int** data;
+    int rows;
+    int cols;
+    int state;
+
+    static int objectCount;
+
+    void allocateMemory(int n, int m, int value) {
+        rows = n;
+        cols = m;
+        state = OK;
+
+        data = new(nothrow) int*[rows];
+        if (!data) {
+            state = MEMORY_ERROR;
+            rows = cols = 0;
+            return;
+        }
+
+        for (int i = 0; i < rows; i++) {
+            data[i] = new(nothrow) int[cols];
+            if (!data[i]) {
+                state = MEMORY_ERROR;
+
+                for (int k = 0; k < i; k++) {
+                    delete[] data[k];
+                }
+                delete[] data;
+                data = nullptr;
+                rows = cols = 0;
+                return;
+            }
+
+            for (int j = 0; j < cols; j++) {
+                data[i][j] = value;
+            }
+        }
+    }
+
+    void freeMemory() {
+        if (data) {
+            for (int i = 0; i < rows; i++) {
+                delete[] data[i];
+            }
+            delete[] data;
+        }
+        data = nullptr;
+    }
+
+public:
+    // Коди стану
+    static const int OK = 0;
+    static const int MEMORY_ERROR = 1;
+    static const int INDEX_ERROR = 2;
+    static const int SIZE_ERROR = 3;
+
+    // Конструктор без параметрів
+    Matrix() {
+        data = nullptr;
+        allocateMemory(3, 3, 0);
+        objectCount++;
+    }
+
+    // Конструктор з одним параметром
+    Matrix(int n) {
+        data = nullptr;
+
+        if (n <= 0) {
+            allocateMemory(3, 3, 0);
+            state = SIZE_ERROR;
+        } else {
+            allocateMemory(n, n, 0);
+        }
+
+        objectCount++;
+    }
+
+    // Конструктор з трьома параметрами
+    Matrix(int n, int m, int value) {
+        data = nullptr;
+
+        if (n <= 0 || m <= 0) {
+            allocateMemory(3, 3, 0);
+            state = SIZE_ERROR;
+        } else {
+            allocateMemory(n, m, value);
+        }
+
+        objectCount++;
+    }
+
+    // Конструктор копіювання
+    Matrix(const Matrix& other) {
+        data = nullptr;
+        allocateMemory(other.rows, other.cols, 0);
+
+        if (state == OK) {
+            for (int i = 0; i < rows; i++) {
+                for (int j = 0; j < cols; j++) {
+                    data[i][j] = other.data[i][j];
+                }
+            }
+            state = other.state;
+        }
+
+        objectCount++;
+    }
+
+    // Оператор присвоєння
+    Matrix& operator=(const Matrix& other) {
+        if (this == &other) {
+            return *this;
+        }
+
+        freeMemory();
+        allocateMemory(other.rows, other.cols, 0);
+
+        if (state == OK) {
+            for (int i = 0; i < rows; i++) {
+                for (int j = 0; j < cols; j++) {
+                    data[i][j] = other.data[i][j];
+                }
+            }
+            state = other.state;
+        }
+
+        return *this;
+    }
+
+    // Деструктор
+    ~Matrix() {
+        freeMemory();
+        objectCount--;
+    }
+
+    // Кількість об'єктів
+    static int getObjectCount() {
+        return objectCount;
+    }
+
+    int getRows() const {
+        return rows;
+    }
+
+    int getCols() const {
+        return cols;
+    }
+
+    int getState() const {
+        return state;
+    }
+
+    // Встановлення елемента
+    void setElement(int i, int j, int value = 0) {
+        if (i < 0 || i >= rows || j < 0 || j >= cols) {
+            state = INDEX_ERROR;
+            return;
+        }
+
+        data[i][j] = value;
+        state = OK;
+    }
+
+    // Отримання елемента
+    int getElement(int i, int j) {
+        if (i < 0 || i >= rows || j < 0 || j >= cols) {
+            state = INDEX_ERROR;
+            return 0;
+        }
+
+        state = OK;
+        return data[i][j];
+    }
+
+    // Друк
+    void print() const {
+        cout << "Matrix (" << rows << "x" << cols << "):\n";
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                cout << data[i][j] << "\t";
+            }
+            cout << "\n";
+        }
+        cout << "State = " << state << "\n";
+    }
+
+    // Додавання
+    Matrix add(const Matrix& other) const {
+        if (rows != other.rows || cols != other.cols) {
+            Matrix temp;
+            temp.state = SIZE_ERROR;
+            return temp;
+        }
+
+        Matrix result(rows, cols, 0);
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                result.data[i][j] = data[i][j] + other.data[i][j];
+            }
+        }
+        return result;
+    }
+
+    // Віднімання
+    Matrix sub(const Matrix& other) const {
+        if (rows != other.rows || cols != other.cols) {
+            Matrix temp;
+            temp.state = SIZE_ERROR;
+            return temp;
+        }
+
+        Matrix result(rows, cols, 0);
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                result.data[i][j] = data[i][j] - other.data[i][j];
+            }
+        }
+        return result;
+    }
+
+    // Множення матриць
+    Matrix multiply(const Matrix& other) const {
+        if (cols != other.rows) {
+            Matrix temp;
+            temp.state = SIZE_ERROR;
+            return temp;
+        }
+
+        Matrix result(rows, other.cols, 0);
+
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < other.cols; j++) {
+                for (int k = 0; k < cols; k++) {
+                    result.data[i][j] += data[i][k] * other.data[k][j];
+                }
+            }
+        }
+
+        return result;
+    }
+
+    // Множення на скаляр short
+    Matrix multiplyByScalar(short value) const {
+        Matrix result(rows, cols, 0);
+
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                result.data[i][j] = data[i][j] * value;
+            }
+        }
+
+        return result;
+    }
+
+    // Рівність
+    bool isEqual(const Matrix& other) const {
+        if (rows != other.rows || cols != other.cols) {
+            return false;
+        }
+
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (data[i][j] != other.data[i][j]) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    // Більше
+    bool isGreater(const Matrix& other) const {
+        if (rows != other.rows || cols != other.cols) {
+            return false;
+        }
+
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (data[i][j] <= other.data[i][j]) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    // Менше
+    bool isLess(const Matrix& other) const {
+        if (rows != other.rows || cols != other.cols) {
+            return false;
+        }
+
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (data[i][j] >= other.data[i][j]) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+};
+
+int Matrix::objectCount = 0;
+
 // ==================== ЗАДАЧА 2 ====================
 class Vector {
 private:
@@ -500,7 +811,126 @@ void task2() {
 
 // ==================== ЗАДАЧА 3 ====================
 void task3() {
-    cout << "\nТут буде код 3 задачі.\n";
+    int choice;
+
+    Matrix m1;
+    Matrix m2(2);
+    Matrix m3(2, 2, 5);
+
+    do {
+        cout << "\n===== ЗАДАЧА 3. Клас Matrix =====\n";
+        cout << "1 - Показати m1, m2, m3\n";
+        cout << "2 - Встановити елемент у m2\n";
+        cout << "3 - Отримати елемент з m2\n";
+        cout << "4 - Копіювання m3 у m4\n";
+        cout << "5 - Присвоєння m1 = m3\n";
+        cout << "6 - Додавання m2 + m3\n";
+        cout << "7 - Віднімання m3 - m2\n";
+        cout << "8 - Множення m2 * m3\n";
+        cout << "9 - Множення m3 на скаляр\n";
+        cout << "10 - Порівняння m2 і m3\n";
+        cout << "11 - Кількість об'єктів\n";
+        cout << "0 - Назад\n";
+        cout << "Ваш вибір: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1: {
+                cout << "\nm1:\n";
+                m1.print();
+                cout << "\nm2:\n";
+                m2.print();
+                cout << "\nm3:\n";
+                m3.print();
+                break;
+            }
+
+            case 2: {
+                int i, j, value;
+                cout << "Введіть індекси i та j: ";
+                cin >> i >> j;
+                cout << "Введіть значення: ";
+                cin >> value;
+                m2.setElement(i, j, value);
+                cout << "Після зміни:\n";
+                m2.print();
+                break;
+            }
+
+            case 3: {
+                int i, j;
+                cout << "Введіть індекси i та j: ";
+                cin >> i >> j;
+                cout << "Елемент = " << m2.getElement(i, j) << "\n";
+                cout << "State = " << m2.getState() << "\n";
+                break;
+            }
+
+            case 4: {
+                Matrix m4(m3);
+                cout << "m4 після копіювання з m3:\n";
+                m4.print();
+                break;
+            }
+
+            case 5: {
+                m1 = m3;
+                cout << "m1 після присвоєння m1 = m3:\n";
+                m1.print();
+                break;
+            }
+
+            case 6: {
+                Matrix result = m2.add(m3);
+                cout << "m2 + m3 = \n";
+                result.print();
+                break;
+            }
+
+            case 7: {
+                Matrix result = m3.sub(m2);
+                cout << "m3 - m2 = \n";
+                result.print();
+                break;
+            }
+
+            case 8: {
+                Matrix result = m2.multiply(m3);
+                cout << "m2 * m3 = \n";
+                result.print();
+                break;
+            }
+
+            case 9: {
+                short k;
+                cout << "Введіть скаляр: ";
+                cin >> k;
+                Matrix result = m3.multiplyByScalar(k);
+                cout << "m3 * " << k << " = \n";
+                result.print();
+                break;
+            }
+
+            case 10: {
+                cout << "m2 == m3 : " << (m2.isEqual(m3) ? "true" : "false") << "\n";
+                cout << "m2 > m3  : " << (m2.isGreater(m3) ? "true" : "false") << "\n";
+                cout << "m2 < m3  : " << (m2.isLess(m3) ? "true" : "false") << "\n";
+                break;
+            }
+
+            case 11: {
+                cout << "Кількість об'єктів Matrix: " << Matrix::getObjectCount() << "\n";
+                break;
+            }
+
+            case 0:
+                break;
+
+            default:
+                cout << "Невірний вибір.\n";
+        }
+
+    } while (choice != 0);
 }
 
 
