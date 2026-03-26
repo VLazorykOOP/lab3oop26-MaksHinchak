@@ -8,7 +8,7 @@ using namespace std;
 // ==================== ЗАДАЧА 3 ====================
 class Matrix {
 private:
-    int** data;
+    int** data = nullptr;
     int rows;
     int cols;
     int state;
